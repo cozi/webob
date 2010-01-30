@@ -158,7 +158,9 @@ class wsgify(object):
                 resp = req.response.merge_cookies(resp)
             return resp(environ, start_response)
         else:
-            return self.func(req, *args, **kw)
+            if self.middleware_wraps:
+                args = (self.middleware_wraps,) + args
+            return self.func(req, *args, **self.kwargs)
 
     def get(self, url, **kw):
         """Run a GET request on this application, returning a Response.
@@ -235,7 +237,7 @@ class wsgify(object):
         Use this like::
 
             @wsgify.middleware
-            def restrict_ip(app, req, ips):
+            def restrict_ip(req, app, ips):
                 if req.remote_addr not in ips:
                     raise webob.exc.HTTPForbidden('Bad IP: %s' % req.remote_addr)
                 return app
@@ -249,7 +251,7 @@ class wsgify(object):
         Or if you want to write output-rewriting middleware::
 
             @wsgify.middleware
-            def all_caps(app, req):
+            def all_caps(req, app):
                 resp = req.get_response(app)
                 resp.body = resp.body.upper()
                 return resp
